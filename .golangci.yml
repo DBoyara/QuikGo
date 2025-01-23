@@ -1,0 +1,40 @@
+linters-settings:
+  errcheck:
+    exclude-functions: .errcheck.txt
+  misspell:
+    ignore-words:
+      - strat
+  gocritic:
+    disabled-checks:
+      - ifElseChain
+linters:
+  disable-all: true
+  enable:
+    - errcheck
+    - gofmt
+    - goimports
+    - gosec
+    - gocritic
+    - misspell
+    - unconvert
+output:
+  uniq-by-line: false
+issues:
+  exclude-dirs:
+    - vendor
+    - pkg/client
+  exclude-rules:
+    - path: _test\.go
+      linters:
+        - errcheck
+        - gosec
+  max-issues-per-linter: 0
+  max-same-issues: 0
+  include:
+    # Enable off-by-default rules for revive requiring that all exported elements have a properly formatted comment.
+    - EXC0012
+    - EXC0014
+run:
+  issues-exit-code: 1
+  timeout: 20m
+  modules-download-mode: mod

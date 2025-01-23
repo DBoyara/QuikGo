@@ -1,0 +1,6 @@
+flag.Set
+os.Setenv
+logger.Sync
+fmt.Fprintf
+fmt.Fprintln
+(io.Closer).Close

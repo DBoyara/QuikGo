@@ -1,0 +1,33 @@
+name: Release and Publish
+
+on:
+  push:
+    tags:
+      - 'v*'  # Запускать workflow при создании тега, начинающегося с 'v'
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Set up Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: 1.21
+
+      - name: Install dependencies
+        run: go mod download
+
+      - name: Run tests
+        run: go test ./...
+
+      - name: Publish to GitHub Packages
+        run: |
+          echo "//npm.pkg.github.com/:_authToken=${{ secrets.GITHUB_TOKEN }}" > ~/.npmrc
+          go list -m github.com/DBoyara/QuikGo@${{ github.ref }} | grep -v 'go: finding' | awk '{print $2}'
+
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
