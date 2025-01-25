@@ -4,7 +4,7 @@
 # Binaries for programs and plugins
 *.exe
 *.exe~
-# *.dll
+*.dll
 *.so
 *.dylib
 
@@ -25,5 +25,4 @@ go.work.sum
 .env
 .vscode/
 .idea/
-*.json
 launch.json

@@ -14,8 +14,8 @@ type Request struct {
 }
 
 type Response struct {
-	Success bool          `json:"success"`
-	Message string        `json:"message,omitempty"`
+	Success bool   `json:"success"`
+	Message string `json:"message,omitempty"`
 }
 
 func main() {
