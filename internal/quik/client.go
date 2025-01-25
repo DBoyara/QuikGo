@@ -1,4 +1,4 @@
-package quik
+package quikgo
 
 import (
 	"context"
