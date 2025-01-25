@@ -23,3 +23,9 @@ go-lint: ## Run linter
 
 lint: ## Run linter
 	go vet ./...
+
+fmt: ## Run linter
+	gofmt -s -w .
+
+imports: ## Run linter
+	goimports -w .
