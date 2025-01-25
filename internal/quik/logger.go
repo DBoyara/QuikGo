@@ -1,4 +1,4 @@
-package quikgo
+package quik
 
 import (
 	"go.uber.org/zap"
