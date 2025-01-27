@@ -2,13 +2,17 @@ package quik
 
 import (
 	"bufio"
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net"
 	"sync"
 
 	"github.com/pkg/errors"
+	"golang.org/x/text/encoding/charmap"
+	"golang.org/x/text/transform"
 )
 
 // TCPClient — реализация интерфейса Client для работы с TCP-соединением.
@@ -54,7 +58,14 @@ func (c *TCPClient) SendRequest(ctx context.Context, request interface{}) (Respo
 		return response, errors.Wrap(err, "failed to read response")
 	}
 
-	if err := json.Unmarshal(responseBytes, &response); err != nil {
+	decoder := charmap.Windows1251.NewDecoder()
+	reader := transform.NewReader(bytes.NewReader(responseBytes), decoder)
+	decodedBytes, err := io.ReadAll(reader)
+	if err != nil {
+		return response, errors.Wrap(err, "failed to decode response")
+	}
+
+	if err := json.Unmarshal(decodedBytes, &response); err != nil {
 		return response, errors.Wrap(err, "failed to unmarshal response")
 	}
 

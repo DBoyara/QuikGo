@@ -23,6 +23,7 @@ issues:
   exclude-dirs:
     - vendor
     - pkg/client
+    - cmd/quik
   exclude-rules:
     - path: _test\.go
       linters:

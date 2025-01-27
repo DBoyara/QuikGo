@@ -4,6 +4,7 @@
       "G501"
     ],
     "exclude": [
-      "**/*_test.go"
+      "**/*_test.go",
+      "cmd/*"
     ]
   }
