@@ -196,15 +196,81 @@ function handle_get_candles(data)
     return { success = true, candles = candles }
 end
 
+-- Получение списка всех торговых счетов
+function get_trade_accounts()
+    local trade_accounts = {}
+    local count = getNumberOf("trade_accounts")
+    for i = 0, count - 1 do
+        local account = getItem("trade_accounts", i)
+        table.insert(trade_accounts, account)
+    end
+    return trade_accounts
+end
+
+-- Получение торгового счета по коду класса
+function get_trade_account(class_code)
+    local count = getNumberOf("trade_accounts")
+    for i = 0, count - 1 do
+        local account = getItem("trade_accounts", i)
+        if string.find(account.class_codes, class_code) then
+            return account
+        end
+    end
+    return nil
+end
+
+-- Функция возвращает информацию по всем денежным лимитам
+function get_money_limits()
+    local money_limits = {}
+    local count = getNumberOf("money_limits")
+    for i = 0, count - 1 do
+        local limit = getItem("money_limits", i)
+        table.insert(money_limits, limit)
+    end
+    return money_limits
+end
+
+-- Функция возвращает информацию о клиентском портфеле
+function get_portfolio_info(firmid, client_code)
+    local portfolio = getPortfolioInfo(firmid, client_code)
+    return portfolio
+end
+
 -- Главный цикл
 function process_request(request)
     if request.cmd == "ping" then
         log("Получена команда PING", 0)
         return { cmd = "pong", message = "Pong from QUIK" }
-    elseif request.cmd == "create_data_source" then
+    elseif request.cmd == "createDataSource" then
         return handle_create_data_source(request.data)
-    elseif request.cmd == "get_candles" then
+    elseif request.cmd == "getСandles" then
         return handle_get_candles(request.data)
+    elseif request.cmd == "getTradeAccounts" then
+        local accounts = get_trade_accounts()
+        return { success = true, accounts = accounts }
+    elseif request.cmd == "getTradeAccount" then
+        if not request.data or not request.data.class_code then
+            return { success = false, message = "Не указан class_code" }
+        end
+        local account = get_trade_account(request.data.class_code)
+        if account then
+            return { success = true, account = account }
+        else
+            return { success = false, message = "Торговый счет не найден" }
+        end
+    elseif request.cmd == "getMoneyLimits" then
+        local limits = get_money_limits()
+        return { success = true, limits = limits }
+    elseif request.cmd == "getPortfolioInfo" then
+        if not request.data or not request.data.firmId or not request.data.clientCode then
+            return { success = false, message = "Не указаны firmId или clientCode" }
+        end
+        local portfolio_info = get_portfolio_info(request.data.firmId, request.data.clientCode)
+        if portfolio_info then
+            return { success = true, portfolio = portfolio_info }
+        else
+            return { success = false, message = "Не удалось получить информацию о портфеле" }
+        end
     else
         log("Неизвестная команда: " .. tostring(request.cmd), 2)
         return { success = false, message = "Неизвестная команда" }

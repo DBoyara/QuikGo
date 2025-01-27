@@ -35,11 +35,35 @@ type CreateDataSourceRequest struct {
 	Class    string `json:"class_code"`
 }
 
+// GetPortfolioRequest — данные для создания DataSource.
+type GetPortfolioRequest struct {
+	ClientCode string `json:"clientCode"`
+	FirmId     string `json:"firmId"`
+}
+
 // Response — структура для получения ответов от Lua-скрипта.
 type Response struct {
-	Success bool         `json:"success"`
-	Message string       `json:"message,omitempty"`
-	Candles []QuikCandle `json:"candles,omitempty"`
+	Success     bool          `json:"success"`
+	Message     string        `json:"message,omitempty"`
+	Candles     []QuikCandle  `json:"candles,omitempty"`
+	Accounts    []Account     `json:"accounts,omitempty"`
+	MoneyLimits []MoneyLimits `json:"limits,omitempty"`
+	Portfolio   interface{}   `json:"portfolio,omitempty"`
+}
+
+type MoneyLimits struct {
+	ClientCode   string  `json:"client_code"`
+	Currentbal   float64 `json:"currentbal"`
+	Currentlimit float64 `json:"currentlimit"`
+	Firmid       string  `json:"firmid"`
+}
+
+type Account struct {
+	Firmid        string `json:"firmid"`
+	Trdaccid      string `json:"trdaccid"`
+	Main_Trdaccid string `json:"main_trdaccid"`
+	Trdacc_type   int    `json:"trdacc_type"`
+	Description   string `json:"description"`
 }
 
 // GetCandlesRequest — данные для получения свечей.
