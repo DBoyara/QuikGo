@@ -41,6 +41,37 @@ type GetPortfolioRequest struct {
 	FirmId     string `json:"firmId"`
 }
 
+// CreateOrderRequest — данные для создания заявки.
+type CreateOrderRequest struct {
+	ClassCode  string `json:"CLASSCODE"`
+	SecCode    string `json:"SECCODE"`
+	Account    string `json:"ACCOUNT"`
+	Trans_id   string `json:"TRANS_ID"`
+	Operation  string `json:"OPERATION"`
+	Price      string `json:"PRICE"`
+	Quantity   string `json:"QUANTITY"`
+	Action     string `json:"ACTION"`
+	Type       string `json:"TYPE"` // L = лимитная заявка (по умолчанию), M = рыночная заявка
+	StopPrice  string `json:"STOPPRICE,omitempty"`
+	ExpiryDate string `json:"EXPIRY_DATE,omitempty"` // GTC - Срок действия до отмены
+}
+
+type GetOrderByNumberRequest struct {
+	ClassCode string `json:"class_code"`
+	OrderId   string `json:"order_id"`
+}
+
+type GetOrderByIdRequest struct {
+	ClassCode string `json:"class_code"`
+	SecCode   string `json:"sec_code"`
+	TransId   string `json:"trans_id"`
+}
+
+type GetStopOrderByTickerRequest struct {
+	ClassCode string `json:"class_code"`
+	SecCode   string `json:"sec_code"`
+}
+
 // Response — структура для получения ответов от Lua-скрипта.
 type Response struct {
 	Success     bool          `json:"success"`

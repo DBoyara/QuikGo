@@ -236,10 +236,60 @@ function get_portfolio_info(firmid, client_code)
     return portfolio
 end
 
+-- Отправка торговой транзакции
+function send_transaction(transaction_params)
+    local result = sendTransaction(transaction_params)
+    if result == "" then
+        return { success = true, message = "transaction send success" }
+    else
+        return { success = false, message = "error send transaction: " .. result }
+    end
+end
+
+-- Функция возвращает заявку по номеру и классу инструмента
+function get_order_by_number(class_code, order_id)
+    local order = getOrderByNumber(class_code, order_id)
+    return order
+end
+
+-- Функция возвращает заявку по заданному инструменту и ID-транзакции
+function get_order_by_id(class_code, sec_code, trans_id)
+    local order_num = 0
+    local selected_order = nil
+
+    for i = 0, getNumberOf("orders") - 1 do
+        local order = getItem("orders", i)
+        if order.class_code == class_code and order.sec_code == sec_code and order.trans_id == tonumber(trans_id) then
+            if order.order_num > order_num then
+                order_num = order.order_num
+                selected_order = order
+            end
+        end
+    end
+
+    return selected_order
+end
+
+-- Функция возвращает список стоп-заявок по заданному инструменту
+function get_stop_orders(class_code, sec_code)
+    local stop_orders = {}
+
+    for i = 0, getNumberOf("stop_orders") - 1 do
+        local stop_order = getItem("stop_orders", i)
+        if stop_order.class_code == class_code and stop_order.sec_code == sec_code then
+            table.insert(stop_orders, stop_order)
+        end
+    end
+
+    return stop_orders
+end
+
+
+
 -- Главный цикл
 function process_request(request)
     if request.cmd == "ping" then
-        log("Получена команда PING", 0)
+        log("Get PING", 0)
         return { cmd = "pong", message = "Pong from QUIK" }
     elseif request.cmd == "createDataSource" then
         return handle_create_data_source(request.data)
@@ -250,37 +300,73 @@ function process_request(request)
         return { success = true, accounts = accounts }
     elseif request.cmd == "getTradeAccount" then
         if not request.data or not request.data.class_code then
-            return { success = false, message = "Не указан class_code" }
+            return { success = false, message = "no class_code" }
         end
         local account = get_trade_account(request.data.class_code)
         if account then
             return { success = true, account = account }
         else
-            return { success = false, message = "Торговый счет не найден" }
+            return { success = false, message = "trade account not found" }
         end
     elseif request.cmd == "getMoneyLimits" then
         local limits = get_money_limits()
         return { success = true, limits = limits }
     elseif request.cmd == "getPortfolioInfo" then
         if not request.data or not request.data.firmId or not request.data.clientCode then
-            return { success = false, message = "Не указаны firmId или clientCode" }
+            return { success = false, message = "no firmId or clientCode" }
         end
         local portfolio_info = get_portfolio_info(request.data.firmId, request.data.clientCode)
         if portfolio_info then
             return { success = true, portfolio = portfolio_info }
         else
-            return { success = false, message = "Не удалось получить информацию о портфеле" }
+            return { success = false, message = "can't get info about portfolio" }
+        end
+    elseif request.cmd == "sendTransaction" then
+        if not request.data  then
+            return { success = false, message = "no transaction data" }
+        end
+        local result = send_transaction(request.data)
+        return result
+    elseif request.cmd == "getOrderByNumber" then
+        if not request.data or not request.data.class_code or not request.data.order_id then
+            return { success = false, message = "Не указаны class_code или order_id" }
+        end
+        local order = get_order_by_number(request.data.class_code, request.data.order_id)
+        if order then
+            return { success = true, order = order }
+        else
+            return { success = false, message = "Заявка не найдена" }
+        end
+    elseif request.cmd == "getOrderById" then
+        if not request.data or not request.data.class_code or not request.data.sec_code or not request.data.trans_id then
+            return { success = false, message = "Не указаны class_code или sec_code или trans_id" }
+        end
+        local order = get_order_by_id(request.data.class_code, request.data.sec_code, request.data.trans_id)
+        if order then
+            return { success = true, order = order }
+        else
+            return { success = false, message = "Заявка не найдена" }
+        end
+    elseif request.cmd == "getStopOrders" then
+        if not request.data or not request.data.class_code or not request.data.sec_code then
+            return { success = false, message = "Не указаны class_code или sec_code" }
+        end
+        local order = get_stop_orders(request.data.class_code, request.data.sec_code)
+        if order then
+            return { success = true, order = order }
+        else
+            return { success = false, message = "Заявка не найдена" }
         end
     else
-        log("Неизвестная команда: " .. tostring(request.cmd), 2)
-        return { success = false, message = "Неизвестная команда" }
+        log("not no this command: " .. tostring(request.cmd), 2)
+        return { success = false, message = "not no this command" }
     end
 end
 
 function main()
     response_server = setup_socket()
     if not response_server then
-        log("Ошибка при настройке сокета", 3)
+        log("error in set socket", 3)
         return
     end
 
