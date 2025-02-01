@@ -39,6 +39,12 @@ func NewQuikClient(host string, port int, isDevelopment bool) (*QuikClient, erro
 	}, nil
 }
 
+// Close закрывает соединение с сервером.
+func (q *QuikClient) Close() error {
+	q.logger.Info("Closing Quik client")
+	return q.client.Close()
+}
+
 // Ping отправляет запрос ping на сервер.
 func (q *QuikClient) Ping(ctx context.Context) (string, error) {
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
@@ -63,7 +69,7 @@ func (q *QuikClient) Ping(ctx context.Context) (string, error) {
 }
 
 // CreateDataSource создает источник данных для получения свечей.
-func (q *QuikClient) CreateDataSource(classCode, ticker string, interval int, ctx context.Context) error {
+func (q *QuikClient) CreateDataSource(data CreateDataSourceRequest, ctx context.Context) error {
 	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 
@@ -71,13 +77,9 @@ func (q *QuikClient) CreateDataSource(classCode, ticker string, interval int, ct
 	defer putRequest(request)
 
 	request.Cmd = "createDataSource"
-	request.Data = CreateDataSourceRequest{
-		Ticker:   ticker,
-		Interval: interval,
-		Class:    classCode,
-	}
+	request.Data = data
 
-	q.logger.Debug("creating data source request", zap.String("classCode", classCode), zap.String("ticker", ticker), zap.Int("interval", interval))
+	q.logger.Debug("creating data source request", zap.String("ticker", data.Ticker), zap.Int("interval", data.Interval))
 
 	response, err := q.client.SendRequest(ctx, request)
 	if err != nil {
@@ -94,7 +96,7 @@ func (q *QuikClient) CreateDataSource(classCode, ticker string, interval int, ct
 }
 
 // GetCandles возвращает свечи из источника данных.
-func (q *QuikClient) GetCandles(ticker, classCode string, interval, count int, ctx context.Context) ([]Candle, error) {
+func (q *QuikClient) GetCandles(data GetCandlesRequest, ctx context.Context) ([]Candle, error) {
 	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 
@@ -102,14 +104,9 @@ func (q *QuikClient) GetCandles(ticker, classCode string, interval, count int, c
 	defer putRequest(request)
 
 	request.Cmd = "getСandles"
-	request.Data = GetCandlesRequest{
-		Class:    classCode,
-		Ticker:   ticker,
-		Interval: interval,
-		Count:    count,
-	}
+	request.Data = data
 
-	q.logger.Debug("getting candles", zap.String("ticker", ticker), zap.Int("count", count), zap.Int("interval", interval))
+	q.logger.Debug("getting candles", zap.String("ticker", data.Ticker), zap.Int("interval", data.Interval))
 
 	response, err := q.client.SendRequest(ctx, request)
 	if err != nil {
@@ -183,7 +180,7 @@ func (q *QuikClient) GetMoneyLimits(ctx context.Context) ([]MoneyLimits, error) 
 }
 
 // GetPortfolioInfo
-func (q *QuikClient) GetPortfolioInfo(firmId, clientCode string, ctx context.Context) (interface{}, error) {
+func (q *QuikClient) GetPortfolioInfo(data GetPortfolioRequest, ctx context.Context) (interface{}, error) {
 	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 
@@ -191,10 +188,7 @@ func (q *QuikClient) GetPortfolioInfo(firmId, clientCode string, ctx context.Con
 	defer putRequest(request)
 
 	request.Cmd = "getPortfolioInfo"
-	request.Data = GetPortfolioRequest{
-		ClientCode: clientCode,
-		FirmId:     firmId,
-	}
+	request.Data = data
 
 	q.logger.Debug("getting portfolio")
 
@@ -212,8 +206,115 @@ func (q *QuikClient) GetPortfolioInfo(firmId, clientCode string, ctx context.Con
 	return response.Portfolio, nil
 }
 
-// Close закрывает соединение с сервером.
-func (q *QuikClient) Close() error {
-	q.logger.Info("Closing Quik client")
-	return q.client.Close()
+// SendTransaction - для работы с заявками.
+// Варианты Action:
+// NEW_ORDER - Новая лимитная/рыночная заявка
+// Action KILL_ORDER - Удаление существующей заявки
+// Action NEW_STOP_ORDER - Новая стоп заявка
+// Action KILL_STOP_ORDER - Удаление существующей стоп-заявки
+func (q *QuikClient) SendTransaction(data CreateOrderRequest, ctx context.Context) error {
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+
+	request := getRequest()
+	defer putRequest(request)
+
+	request.Cmd = "sendTransaction"
+	request.Data = data
+
+	q.logger.Debug("send transaction", zap.Any("request", request))
+
+	response, err := q.client.SendRequest(ctx, request)
+	if err != nil {
+		return errors.Wrap(err, "failed to send transaction: %w")
+	}
+
+	if !response.Success {
+		return fmt.Errorf("send transaction failed with message: %s", response.Message)
+	}
+
+	q.logger.Debug("Received transaction response", zap.Any("response", response))
+
+	return err
+}
+
+// GetOrderByNumber - возвращает заявку по режиму торгов и номеру
+func (q *QuikClient) GetOrderByNumber(data GetOrderByNumberRequest, ctx context.Context) error {
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+
+	request := getRequest()
+	defer putRequest(request)
+
+	request.Cmd = "getOrderByNumber"
+	request.Data = data
+
+	q.logger.Debug("getting order", zap.Any("request", request))
+
+	response, err := q.client.SendRequest(ctx, request)
+	if err != nil {
+		return errors.Wrap(err, "failed to getting order: %w")
+	}
+
+	if !response.Success {
+		return fmt.Errorf("getting order failed with message: %s", response.Message)
+	}
+
+	q.logger.Debug("Received order response", zap.Any("response", response))
+
+	return err
+}
+
+// GetOrderById - возвращает заявку по тикеру и коду транзакции заявки
+func (q *QuikClient) GetOrderById(data GetOrderByIdRequest, ctx context.Context) error {
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+
+	request := getRequest()
+	defer putRequest(request)
+
+	request.Cmd = "getOrderById"
+	request.Data = data
+
+	q.logger.Debug("getting order", zap.Any("request", request))
+
+	response, err := q.client.SendRequest(ctx, request)
+	if err != nil {
+		return errors.Wrap(err, "failed to getting order: %w")
+	}
+
+	if !response.Success {
+		return fmt.Errorf("getting order failed with message: %s", response.Message)
+	}
+
+	q.logger.Debug("Received order response", zap.Any("response", response))
+
+	return err
+}
+
+// GetStopOrders - возвращает список стоп-заявок по заданному инструменту
+func (q *QuikClient) GetStopOrders(data GetStopOrderByTickerRequest, ctx context.Context) error {
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+
+	request := getRequest()
+	defer putRequest(request)
+
+	request.Cmd = "getStopOrders"
+	request.Data = data
+
+	q.logger.Debug("getting order", zap.Any("request", request))
+
+	response, err := q.client.SendRequest(ctx, request)
+	if err != nil {
+		return errors.Wrap(err, "failed to getting order: %w")
+	}
+
+	if !response.Success {
+		return fmt.Errorf("getting order failed with message: %s", response.Message)
+	}
+
+	q.logger.Debug("Received order response", zap.Any("response", response))
+
+	return err
 }
