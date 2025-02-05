@@ -23,7 +23,7 @@ type TCPClient struct {
 }
 
 // NewTCPClient создает новый экземпляр TCPClient.
-func NewTCPClient(host string, port int) (*TCPClient, error) {
+func newTCPClient(host string, port int) (*TCPClient, error) {
 	address := fmt.Sprintf("%s:%d", host, port)
 	conn, err := net.Dial("tcp", address)
 	if err != nil {
@@ -37,11 +37,11 @@ func NewTCPClient(host string, port int) (*TCPClient, error) {
 }
 
 // SendRequest отправляет запрос на сервер и возвращает ответ.
-func (c *TCPClient) SendRequest(ctx context.Context, request interface{}) (Response, error) {
+func (c *TCPClient) sendRequest(ctx context.Context, request interface{}) (response, error) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
-	var response Response
+	var response response
 
 	requestBytes, err := json.Marshal(request)
 	if err != nil {
@@ -73,6 +73,6 @@ func (c *TCPClient) SendRequest(ctx context.Context, request interface{}) (Respo
 }
 
 // Close закрывает соединение с сервером.
-func (c *TCPClient) Close() error {
+func (c *TCPClient) close() error {
 	return c.conn.Close()
 }

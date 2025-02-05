@@ -11,8 +11,8 @@ import (
 
 // Client — интерфейс для работы с TCP-клиентом.
 type Client interface {
-	SendRequest(ctx context.Context, request interface{}) (Response, error)
-	Close() error
+	sendRequest(ctx context.Context, request interface{}) (response, error)
+	close() error
 }
 
 // QuikClient — клиент для работы с QUIK.
@@ -23,7 +23,7 @@ type QuikClient struct {
 
 // NewQuikClient создает новый экземпляр QuikClient.
 func NewQuikClient(host string, port int, isDevelopment bool) (*QuikClient, error) {
-	tcpClient, err := NewTCPClient(host, port)
+	tcpClient, err := newTCPClient(host, port)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to create TCP client")
 	}
@@ -42,7 +42,7 @@ func NewQuikClient(host string, port int, isDevelopment bool) (*QuikClient, erro
 // Close закрывает соединение с сервером.
 func (q *QuikClient) Close() error {
 	q.logger.Info("Closing Quik client")
-	return q.client.Close()
+	return q.client.close()
 }
 
 // Ping отправляет запрос ping на сервер.
@@ -58,7 +58,7 @@ func (q *QuikClient) Ping(ctx context.Context) (string, error) {
 
 	q.logger.Debug("sending ping request", zap.Any("request", request))
 
-	response, err := q.client.SendRequest(ctx, request)
+	response, err := q.client.sendRequest(ctx, request)
 	if err != nil {
 		return "", errors.Wrap(err, "failed to send ping request")
 	}
@@ -81,7 +81,7 @@ func (q *QuikClient) CreateDataSource(data CreateDataSourceRequest, ctx context.
 
 	q.logger.Debug("creating data source request", zap.String("ticker", data.Ticker), zap.Int("interval", data.Interval))
 
-	response, err := q.client.SendRequest(ctx, request)
+	response, err := q.client.sendRequest(ctx, request)
 	if err != nil {
 		return errors.Wrap(err, "failed to create data source")
 	}
@@ -108,7 +108,7 @@ func (q *QuikClient) GetCandles(data GetCandlesRequest, ctx context.Context) ([]
 
 	q.logger.Debug("getting candles", zap.String("ticker", data.Ticker), zap.Int("interval", data.Interval))
 
-	response, err := q.client.SendRequest(ctx, request)
+	response, err := q.client.sendRequest(ctx, request)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get candles: %w")
 	}
@@ -121,7 +121,7 @@ func (q *QuikClient) GetCandles(data GetCandlesRequest, ctx context.Context) ([]
 
 	var candles []Candle
 	for _, item := range response.Candles {
-		candles = append(candles, ToCandleResult(item))
+		candles = append(candles, toCandleResult(item))
 	}
 
 	return candles, nil
@@ -139,7 +139,7 @@ func (q *QuikClient) GetTradeAccounts(ctx context.Context) ([]Account, error) {
 
 	q.logger.Debug("getting trade accounts")
 
-	response, err := q.client.SendRequest(ctx, request)
+	response, err := q.client.sendRequest(ctx, request)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get trade accounts: %w")
 	}
@@ -165,7 +165,7 @@ func (q *QuikClient) GetMoneyLimits(ctx context.Context) ([]MoneyLimits, error) 
 
 	q.logger.Debug("getting money limits")
 
-	response, err := q.client.SendRequest(ctx, request)
+	response, err := q.client.sendRequest(ctx, request)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get money limits: %w")
 	}
@@ -192,7 +192,7 @@ func (q *QuikClient) GetPortfolioInfo(data GetPortfolioRequest, ctx context.Cont
 
 	q.logger.Debug("getting portfolio")
 
-	response, err := q.client.SendRequest(ctx, request)
+	response, err := q.client.sendRequest(ctx, request)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get portfolio: %w")
 	}
@@ -224,7 +224,7 @@ func (q *QuikClient) SendTransaction(data CreateOrderRequest, ctx context.Contex
 
 	q.logger.Debug("send transaction", zap.Any("request", request))
 
-	response, err := q.client.SendRequest(ctx, request)
+	response, err := q.client.sendRequest(ctx, request)
 	if err != nil {
 		return errors.Wrap(err, "failed to send transaction: %w")
 	}
@@ -251,7 +251,7 @@ func (q *QuikClient) GetOrderByNumber(data GetOrderByNumberRequest, ctx context.
 
 	q.logger.Debug("getting order", zap.Any("request", request))
 
-	response, err := q.client.SendRequest(ctx, request)
+	response, err := q.client.sendRequest(ctx, request)
 	if err != nil {
 		return errors.Wrap(err, "failed to getting order: %w")
 	}
@@ -278,7 +278,7 @@ func (q *QuikClient) GetOrderById(data GetOrderByIdRequest, ctx context.Context)
 
 	q.logger.Debug("getting order", zap.Any("request", request))
 
-	response, err := q.client.SendRequest(ctx, request)
+	response, err := q.client.sendRequest(ctx, request)
 	if err != nil {
 		return errors.Wrap(err, "failed to getting order: %w")
 	}
@@ -305,7 +305,7 @@ func (q *QuikClient) GetStopOrders(data GetStopOrderByTickerRequest, ctx context
 
 	q.logger.Debug("getting order", zap.Any("request", request))
 
-	response, err := q.client.SendRequest(ctx, request)
+	response, err := q.client.sendRequest(ctx, request)
 	if err != nil {
 		return errors.Wrap(err, "failed to getting order: %w")
 	}

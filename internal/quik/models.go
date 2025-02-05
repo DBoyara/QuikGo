@@ -23,7 +23,7 @@ func init() {
 }
 
 // Request — структура для отправки запросов на Lua-скрипт.
-type Request struct {
+type request struct {
 	Cmd  string      `json:"cmd"`
 	Data interface{} `json:"data"`
 }
@@ -73,7 +73,7 @@ type GetStopOrderByTickerRequest struct {
 }
 
 // Response — структура для получения ответов от Lua-скрипта.
-type Response struct {
+type response struct {
 	Success     bool          `json:"success"`
 	Message     string        `json:"message,omitempty"`
 	Candles     []QuikCandle  `json:"candles,omitempty"`
@@ -138,8 +138,8 @@ type Candle struct {
 	Volume    int     `json:"volume"`
 }
 
-// ParseQuikTime преобразует QuikTime в строку формата timestamp с учетом московского времени.
-func ParseQuikTime(qt QuikTime) string {
+// parseQuikTime преобразует QuikTime в строку формата timestamp с учетом московского времени.
+func parseQuikTime(qt QuikTime) string {
 	t := time.Date(
 		qt.Year, time.Month(qt.Month), qt.Day,
 		qt.Hour, qt.Min, qt.Sec, qt.Msec*int(time.Millisecond),
@@ -148,10 +148,10 @@ func ParseQuikTime(qt QuikTime) string {
 	return t.Format(time.RFC3339)
 }
 
-// ToCandleResult преобразует QuikCandle в Candle.
-func ToCandleResult(qc QuikCandle) Candle {
+// toCandleResult преобразует QuikCandle в Candle.
+func toCandleResult(qc QuikCandle) Candle {
 	return Candle{
-		Timestamp: ParseQuikTime(qc.Time),
+		Timestamp: parseQuikTime(qc.Time),
 		Open:      qc.Open,
 		Close:     qc.Close,
 		High:      qc.High,
@@ -163,16 +163,16 @@ func ToCandleResult(qc QuikCandle) Candle {
 // sync.Pool для повторного использования объектов Request.
 var requestPool = sync.Pool{
 	New: func() interface{} {
-		return &Request{}
+		return &request{}
 	},
 }
 
 // getRequest возвращает объект Request из пула.
-func getRequest() *Request {
-	return requestPool.Get().(*Request)
+func getRequest() *request {
+	return requestPool.Get().(*request)
 }
 
 // putRequest возвращает объект Request в пул.
-func putRequest(req *Request) {
+func putRequest(req *request) {
 	requestPool.Put(req)
 }
