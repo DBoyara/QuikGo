@@ -1,3 +1,6 @@
+--~ Copyright (c) 2025 QuikGO Author https://github.com/DBoyara. All rights reserved.
+--~ Licensed under the Apache License, Version 2.0. See LICENSE.txt in the project root for license information.
+
 -- Устанавливаем пути для библиотек
 script_path = getScriptPath()
 package.path = package.path .. ";" .. script_path .. "\\?.lua;" .. script_path .. "\\?.luac"..";"..".\\?.lua;"..".\\?.luac"
@@ -7,34 +10,77 @@ local socket = require("socket")
 local json = require("dkjson")
 
 local response_host = "127.0.0.1"
-local response_port = 34130
+local response_port = 54320
+local callback_host = "127.0.0.1"
+local callback_port = 54321
 local response_server
 local response_client
 local is_connected = false
+local is_subscribed = false
 
 -- Хранилище DataSource
 local data_sources = {}
 
 -- Логирование
 local logfile = io.open(script_path .. "\\logs\\script_log.txt", "a")
+local request_id = 0
 function log(msg, level)
     level = level or 1
-    local log_msg = os.date("%Y-%m-%d %H:%M:%S") .. " [LOG " .. level .. "]: " .. msg
+    request_id = request_id + 1
+    local log_msg = os.date("%Y-%m-%d %H:%M:%S") .. " [LOG " .. level .. "] [ReqID: " .. request_id .. "]: " .. msg
 
-    -- Запись в файл
     if logfile then
         logfile:write(log_msg .. "\n")
         logfile:flush()
     end
 
-    -- Вывод в окно "Лог Lua"
     PrintDbgStr(log_msg)
+end
+
+-- Подключаемся к Go-серверу
+function connect_to_go()
+    local client, err = socket.tcp()
+    if not client then
+        log("Ошибка создания сокета: " .. err, 3)
+        return nil
+    end
+
+    local success, err = client:connect(callback_host, callback_port)
+    if not success then
+        log("Ошибка подключения к Go: " .. err, 3)
+        return nil
+    end
+
+    log("Подключение к Go-серверу установлено!", 1)
+    
+    client:settimeout(0)
+    return client
+end
+
+local event_client = connect_to_go()
+
+
+function to_json(msg)
+    local status, str = pcall(json.encode, msg, { indent = false })
+    
+    if status then 
+        return str 
+    else 
+        log("Ошибка сериализации JSON: " .. tostring(str), 3)
+        return nil 
+    end
+end
+
+-- Подписка на события QUIK
+function subscribe_to_callbacks()
+    is_subscribed = true
+    log("Подписка на события QUIK активирована", 1)
 end
 
 -- Создаём сокет-сервер
 function setup_socket()
     local attempts = 3
-    local delay_between_attempts = 1000  -- Задержка между попытками в миллисекундах
+    local delay_between_attempts = 1000
 
     for i = 1, attempts do
         local status, server = pcall(socket.bind, response_host, response_port)
@@ -97,27 +143,27 @@ end
 
 -- Отправляем ответ
 function send_response(client, response)
-    local response_str = json.encode(response)
-    if response_str then
-        local attempts = 3
-        for i = 1, attempts do
-            local status, err = pcall(client.send, client, response_str .. "\n")
-            if status then
-                log("Отправлен ответ: " .. response_str, 0)
-                return true
-            else
-                log("Ошибка отправки ответа (попытка " .. i .. " из " .. attempts .. "): " .. (err or "неизвестная ошибка"), 3)
-                if i < attempts then
-                    sleep(1000)  -- Задержка между попытками
-                end
-            end
-        end
-        log("Не удалось отправить ответ после " .. attempts .. " попыток", 3)
-        return false
-    else
-        log("Ошибка кодирования JSON для ответа", 3)
+    local status, response_str = pcall(json.encode, response)
+    if not status then
+        log("Ошибка кодирования JSON: " .. response_str, 3)
         return false
     end
+
+    local attempts = 3
+    for i = 1, attempts do
+        local status, err = pcall(client.send, client, response_str .. "\n")
+        if status then
+            log("Отправлен ответ: " .. response_str, 0)
+            return true
+        else
+            log("Ошибка отправки ответа (попытка " .. i .. " из " .. attempts .. "): " .. (err or "неизвестная ошибка"), 3)
+            if i < attempts then
+                sleep(1000)
+            end
+        end
+    end
+    log("Не удалось отправить ответ после " .. attempts .. " попыток", 3)
+    return false
 end
 
 -- Создаём DataSource
@@ -284,7 +330,72 @@ function get_stop_orders(class_code, sec_code)
     return stop_orders
 end
 
+-- Callbacks
+function OnOrder(order)
+    send_event("OnOrder", order)
+end
 
+function OnTrade(trade)
+    send_event("OnTrade", trade)
+end
+
+function OnAllTrade(alltrade)
+    send_event("OnAllTrade", alltrade)
+end
+
+function OnTransReply(trans_reply)
+    send_event("OnTransReply", trans_reply)
+end
+
+function OnQuote(class_code, sec_code)
+    send_event("OnQuote", { class_code = class_code, sec_code = sec_code })
+end
+
+function OnConnected()
+    send_event("OnConnected", "QUIK подключен")
+end
+
+function OnDisconnected()
+    send_event("OnDisconnected", "QUIK отключен")
+end
+
+function OnStopOrder(stop_order)
+    send_event("OnStopOrder", stop_order)
+end
+
+function OnAccountBalance(acc_bal)
+    send_event("OnAccountBalance", acc_bal)
+end
+
+function OnAccountPosition(acc_pos)
+    send_event("OnAccountPosition", acc_pos)
+end
+
+function OnClose()
+    send_event("OnClose", "QUIK# завершает работу")
+end
+
+function OnInit(script_path)
+    send_event("OnInit", script_path)
+    log("QUIK# is initialized from "..script_path, 0)
+end
+
+-- Функция отправки событий
+function send_event(event_name, event_data)
+    if not event_client then
+        log("Соединение с Go отсутствует!", 3)
+        return
+    end
+
+    local msg = json.encode({ cmd = event_name, data = event_data }) .. "\n"
+    local success, err = event_client:send(msg)
+
+    if success then
+        log("Отправлено событие в Go: " .. event_name, 1)
+    else
+        log("Ошибка отправки события: " .. err, 3)
+    end
+end
 
 -- Главный цикл
 function process_request(request)
@@ -357,39 +468,79 @@ function process_request(request)
         else
             return { success = false, message = "Заявка не найдена" }
         end
+    elseif request.cmd == "subscribeToEvents" then
+        subscribe_to_callbacks()
+        return { success = true, message = "Подписка на события активирована" }
     else
         log("not no this command: " .. tostring(request.cmd), 2)
         return { success = false, message = "not no this command" }
     end
 end
 
+-- Функция для переподключения к Go-серверу
+function reconnect_to_go(max_attempts, delay)
+    max_attempts = max_attempts or 5  -- Максимальное количество попыток (по умолчанию 5)
+    delay = delay or 2000             -- Задержка между попытками (в миллисекундах)
+
+    for attempt = 1, max_attempts do
+        log("Попытка подключения #" .. attempt, 2)
+        
+        event_client = connect_to_go()
+        
+        if event_client then
+            log("Успешное подключение к Go-серверу!", 1)
+            return true
+        end
+
+        log("Не удалось подключиться. Повтор через " .. (delay / 1000) .. " секунд.", 3)
+        sleep(delay) -- Ожидание перед следующей попыткой
+    end
+
+    log("Ошибка: не удалось подключиться после " .. max_attempts .. " попыток.", 3)
+    return false
+end
+
+-- Основная функция запуска сервера и обработки запросов.
 function main()
     response_server = setup_socket()
+    
     if not response_server then
-        log("error in set socket", 3)
+        log("Ошибка при настройке сокета", 3)
         return
     end
 
-    while true do
-        if not is_connected then
+    while true do 
+        if not is_connected then 
             response_client = accept_client()
-        else
-            local request, err = receive_message(response_client)
-            if request then
-                local response = process_request(request)
-                send_response(response_client, response)
-            elseif err then
-                if err ~= "timeout" then
-                    -- Это реальная ошибка (например, клиент отключился)
-                    log("Клиент отключился: " .. err, 3)
-                    response_client = nil
-                    is_connected = false
-                else
-                    -- Это штатная ситуация: клиент не отправил данные (таймаут)
-                    -- Не логируем это как ошибку
-                end
+            
+            if not response_client then 
+                sleep(500) -- Ждём перед повторной проверкой подключения клиента.
+            else 
+                is_connected = true  
+                log("Клиент успешно подключен",1)  
+                
+                -- Проверяем соединение с Go-сервером и переподключаемся при необходимости.
+                if not event_client or not reconnect_to_go() then  
+                    log("Не удалось установить соединение с Go. Завершение работы.",3)  
+                    break  
+                end   
             end
-        end
-        sleep(100)
-    end
-end
+            
+        else   
+            local request, err = receive_message(response_client)
+
+            if request then   
+                local response = process_request(request)    
+                send_response(response_client, response)
+
+            elseif err and err ~= "timeout" then    
+               -- Ошибка связи или отключение клиента.
+               log ("Клиент отключился: "..err ,3 )     
+               response_client=nil     
+               is_connected=false      
+           end       
+       end  
+
+       sleep(100)   -- Пауза перед следующим циклом обработки событий.      
+   end   
+end 
