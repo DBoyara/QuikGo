@@ -6,6 +6,7 @@ import (
 
 // Реэкспортируем типы
 type QuikClient = quik.QuikClient
+type QuikServer = quik.QuikServer
 type CreateDataSourceRequest = quik.CreateDataSourceRequest
 type GetPortfolioRequest = quik.GetPortfolioRequest
 type CreateOrderRequest = quik.CreateOrderRequest
@@ -18,8 +19,11 @@ type GetCandlesRequest = quik.GetCandlesRequest
 type QuikCandle = quik.QuikCandle
 type QuikTime = quik.QuikTime
 type Candle = quik.Candle
+type Event = quik.Event
 
 // Реэкспортируем функции
 var NewQuikClient = quik.NewQuikClient
+var NewQuikServer = quik.NewQuikServer
 var NewLogger = quik.NewLogger
 var NewCounter = quik.NewCounter
+var RunServer = quik.RunServer

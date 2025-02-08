@@ -176,3 +176,10 @@ func getRequest() *request {
 func putRequest(req *request) {
 	requestPool.Put(req)
 }
+
+// Event — структура для обработки колбэков от QUIK.
+type Event struct {
+	Cmd  string      `json:"cmd"`
+	T    int64       `json:"t"`
+	Data interface{} `json:"data"`
+}
