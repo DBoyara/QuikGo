@@ -20,6 +20,7 @@ type QuikCandle = quik.QuikCandle
 type QuikTime = quik.QuikTime
 type Candle = quik.Candle
 type Event = quik.Event
+type Counter = quik.Counter
 
 // Реэкспортируем функции
 var NewQuikClient = quik.NewQuikClient

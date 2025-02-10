@@ -371,6 +371,42 @@ function OnAccountPosition(acc_pos)
     send_event("OnAccountPosition", acc_pos)
 end
 
+function OnFirm(firm)
+    send_event("OnFirm", firm)
+end
+
+function OnFuturesLimitChange(fut_limit)
+    send_event("OnFuturesLimitChange", fut_limit)
+end
+
+function OnFuturesLimitDelete(lim_del)
+    send_event("OnFuturesLimitDelete", lim_del)
+end
+
+function OnFuturesClientHolding(fut_pos)
+    send_event("OnFuturesClientHolding", fut_pos)
+end
+
+function OnMoneyLimit(mlimit)
+    send_event("OnMoneyLimit", mlimit)
+end
+
+function OnMoneyLimitDelete(mlimit_del)
+    send_event("OnMoneyLimitDelete", mlimit_del)
+end
+
+function OnDepoLimit(dlimit)
+    send_event("OnDepoLimit", dlimit)
+end
+
+function OnDepoLimitDelete(dlimit_del)
+    send_event("OnDepoLimitDelete", dlimit_del)
+end
+
+function OnStop()
+    send_event("OnStop", "Lua завершает работу")
+end
+
 function OnClose()
     send_event("OnClose", "QUIK# завершает работу")
 end
