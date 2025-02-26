@@ -166,6 +166,16 @@ function send_response(client, response)
     return false
 end
 
+-- Функция для получения последней цены тикера
+function get_last_price(class_code, sec_code)
+    local param = getParamEx(class_code, sec_code, "LAST")
+    if param and param.param_value then
+        return { success = true, message = param.param_value }
+    else
+        return { success = false, message = "Не удалось получить последнюю цену для " .. sec_code }
+    end
+end
+
 -- Создаём DataSource
 function create_data_source(class_code, sec_code, interval)
     local attempts = 3
@@ -507,6 +517,11 @@ function process_request(request)
     elseif request.cmd == "subscribeToEvents" then
         subscribe_to_callbacks()
         return { success = true, message = "Подписка на события активирована" }
+    elseif request.cmd == "getLastPrice" then
+        if not request.data or not request.data.class_code or not request.data.sec_code then
+            return { success = false, message = "Не указаны class_code или sec_code" }
+        end
+        return get_last_price(request.data.class_code, request.data.sec_code)
     else
         log("not no this command: " .. tostring(request.cmd), 2)
         return { success = false, message = "not no this command" }

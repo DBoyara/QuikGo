@@ -115,12 +115,6 @@ func (s *QuikServer) handleClient(conn net.Conn) {
 				continue
 			}
 
-			s.logger.Debug("📩 Получено событие", zap.String("cmd", event.Cmd), zap.Any("data", event.Data))
-
-			if event.Cmd == "OnConnected" {
-				s.logger.Debug("✅ Lua успешно подключен", zap.Any("data", event.Data))
-			}
-
 			if s.eventHandler != nil {
 				s.eventHandler(event)
 			}
