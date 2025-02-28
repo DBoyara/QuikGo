@@ -220,6 +220,27 @@ function handle_create_data_source(data)
     end
 end
 
+-- Обрабатываем команду закрытия DataSource
+function handle_close_data_source(data)
+    if not data.ticker or not data.interval then
+        return { success = false, message = "Не указаны ticker или interval" }
+    end
+
+    local sec_code = data.ticker
+    local interval = data.interval
+    local key = sec_code .. "|" .. interval
+
+    if not data_sources[key] then
+        return { success = false, message = "DataSource для " .. key .. " не найден." }
+    end
+
+    -- Закрываем DataSource
+    data_sources[key]:Close()
+    data_sources[key] = nil  -- Удаляем из таблицы
+
+    return { success = true, message = "DataSource для " .. key .. " успешно закрыт." }
+end
+
 -- Получение свечей
 function handle_get_candles(data)
     if not data.ticker or not data.interval then
@@ -450,6 +471,8 @@ function process_request(request)
         return { cmd = "pong", message = "Pong from QUIK" }
     elseif request.cmd == "createDataSource" then
         return handle_create_data_source(request.data)
+    elseif request.cmd == "closeDataSource" then
+        return handle_close_data_source(request.data)
     elseif request.cmd == "getСandles" then
         return handle_get_candles(request.data)
     elseif request.cmd == "getTradeAccounts" then
