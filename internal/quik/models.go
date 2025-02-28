@@ -28,10 +28,15 @@ type request struct {
 	Data interface{} `json:"data"`
 }
 
-// CreateDataSourceRequest — данные для создания DataSource.
-type CreateDataSourceRequest struct {
+// DataSourceRequest — данные для работы с  DataSource.
+type DataSourceRequest struct {
 	Ticker   string `json:"ticker"`
 	Interval int    `json:"interval"`
+}
+
+// CreateDataSourceRequest — данные для создания DataSource.
+type CreateDataSourceRequest struct {
+	DataSourceRequest
 	Class    string `json:"class_code"`
 }
 

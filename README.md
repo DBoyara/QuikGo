@@ -40,9 +40,11 @@ func main() {
 ```go
 func main() {
 	dataDataSource := quik.CreateDataSourceRequest{
-		Ticker:   "SBER",
-		Interval: 1,
-		Class:    "TQBR",
+		quik.DataSourceRequest: quik.DataSourceRequest{
+			Ticker:   "SBER",
+			Interval: 1,
+		}
+		Class: "TQBR",
 	}
 	err := client.CreateDataSource(dataDataSource, context)
 	if err != nil {

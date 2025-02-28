@@ -59,6 +59,33 @@ func (q *QuikClient) CreateDataSource(data CreateDataSourceRequest, ctx context.
 	return nil
 }
 
+// CreateDataSource закрывает источник данных.
+func (q *QuikClient) CloseDataSource(data DataSourceRequest, ctx context.Context) error {
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	defer cancel()
+
+	request := getRequest()
+	defer putRequest(request)
+
+	request.Cmd = "closeDataSource"
+	request.Data = data
+
+	q.logger.Debug("close data source request", zap.String("ticker", data.Ticker), zap.Int("interval", data.Interval))
+
+	response, err := q.client.sendRequest(ctx, request)
+	if err != nil {
+		return errors.Wrap(err, "failed to close data source")
+	}
+
+	if !response.Success {
+		return fmt.Errorf("failed to close data source with message: %s", response.Message)
+	}
+
+	q.logger.Debug("data source closed", zap.Bool("success", response.Success))
+
+	return nil
+}
+
 // GetCandles возвращает свечи из источника данных.
 func (q *QuikClient) GetCandles(data GetCandlesRequest, ctx context.Context) ([]Candle, error) {
 	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)

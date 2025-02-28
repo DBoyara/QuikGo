@@ -7,6 +7,7 @@ import (
 // Реэкспортируем типы
 type QuikClient = quik.QuikClient
 type QuikServer = quik.QuikServer
+type DataSourceRequest = quik.DataSourceRequest
 type CreateDataSourceRequest = quik.CreateDataSourceRequest
 type GetPortfolioRequest = quik.GetPortfolioRequest
 type CreateOrderRequest = quik.CreateOrderRequest
