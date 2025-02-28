@@ -37,7 +37,7 @@ type DataSourceRequest struct {
 // CreateDataSourceRequest — данные для создания DataSource.
 type CreateDataSourceRequest struct {
 	DataSourceRequest
-	Class    string `json:"class_code"`
+	Class string `json:"class_code"`
 }
 
 // GetPortfolioRequest — данные для создания DataSource.
