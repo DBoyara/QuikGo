@@ -86,6 +86,32 @@ func (q *QuikClient) CloseDataSource(data DataSourceRequest, ctx context.Context
 	return nil
 }
 
+func (q *QuikClient) SubscribeOrderBook(data SubscribeOrderBookRequest, ctx context.Context) error {
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	defer cancel()
+
+	request := getRequest()
+	defer putRequest(request)
+
+	request.Cmd = "subscribeOrderBook"
+	request.Data = data
+
+	q.logger.Debug("subscribe OrderBook request", zap.String("classCode", data.ClassCode), zap.String("ticker", data.SecCode))
+
+	response, err := q.client.sendRequest(ctx, request)
+	if err != nil {
+		return errors.Wrap(err, "failed to subscribe OrderBook")
+	}
+
+	if !response.Success {
+		return fmt.Errorf("failed to subscribe OrderBook with message: %s", response.Message)
+	}
+
+	q.logger.Debug("subscribe to OrderBook", zap.Bool("success", response.Success))
+
+	return nil
+}
+
 // GetCandles возвращает свечи из источника данных.
 func (q *QuikClient) GetCandles(data GetCandlesRequest, ctx context.Context) ([]Candle, error) {
 	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
