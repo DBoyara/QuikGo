@@ -17,6 +17,7 @@ local response_server
 local response_client
 local is_connected = false
 local is_subscribed = false
+local INTERVAL_TICKS = 1
 
 -- Хранилище DataSource
 local data_sources = {}
@@ -379,7 +380,17 @@ function OnTransReply(trans_reply)
 end
 
 function OnQuote(class_code, sec_code)
-    send_event("OnQuote", { class_code = class_code, sec_code = sec_code })
+    local msg = {}
+    local status, ql2 = pcall(getQuoteLevel2, class_code, sec_code)
+    if status then
+        msg.data = ql2
+        msg.data.class_code = class_code
+        msg.data.sec_code = sec_code
+
+        send_event("OnQuote", msg)
+    else
+        log("Ошибка при получении стакана для " .. sec_code, 3)
+    end
 end
 
 function OnConnected()
@@ -447,6 +458,46 @@ function OnInit(script_path)
     log("QUIK# is initialized from "..script_path, 0)
 end
 
+-- Функция для подписки на обновления стакана котировок
+function subscribe_to_order_book(class_code, sec_code)
+    local key = sec_code .. "|ORDERBOOK"
+    if data_sources[key] then
+        log("Подписка на стакан для " .. sec_code .. " уже существует.", 2)
+        return
+    end
+
+    -- Создаем DataSource для стакана котировок
+    local ds, err = create_data_source(class_code, sec_code, INTERVAL_TICKS)
+    if not ds then
+        log("Ошибка при создании DataSource для стакана " .. sec_code .. ": " .. err, 3)
+        return
+    end
+
+    -- Сохраняем DataSource в таблицу
+    data_sources[key] = ds
+
+    -- Callback-функция для обработки обновлений стакана
+    function OnData(ds)
+        local msg = {}
+        local status, ql2 = pcall(getQuoteLevel2, class_code, sec_code)
+        if status then
+            msg.data = ql2
+            msg.data.class_code = class_code
+            msg.data.sec_code = sec_code
+
+            -- Отправляем данные клиенту
+            send_event("OrderBookUpdate", msg)
+        else
+            log("Ошибка при получении стакана для " .. sec_code, 3)
+        end
+    end
+
+    -- Подписываемся на обновления
+    ds:SetUpdateCallback(OnData)
+
+    log("Подписка на стакан для " .. sec_code .. " успешно создана.", 1)
+end
+
 -- Функция отправки событий
 function send_event(event_name, event_data)
     if not event_client then
@@ -473,6 +524,8 @@ function process_request(request)
         return handle_create_data_source(request.data)
     elseif request.cmd == "closeDataSource" then
         return handle_close_data_source(request.data)
+    elseif request.cmd == "subscribeOrderBook" then
+        return subscribe_to_order_book(request.data.class_code, request.data.sec_code)
     elseif request.cmd == "getСandles" then
         return handle_get_candles(request.data)
     elseif request.cmd == "getTradeAccounts" then

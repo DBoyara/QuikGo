@@ -34,10 +34,16 @@ type DataSourceRequest struct {
 	Interval int    `json:"interval"`
 }
 
+// SubscribeOrderBookRequest — данные для работы с  DataSource.
+type SubscribeOrderBookRequest struct {
+	ClassCode string `json:"class_code"`
+	SecCode   string `json:"sec_code"`
+}
+
 // CreateDataSourceRequest — данные для создания DataSource.
 type CreateDataSourceRequest struct {
 	DataSourceRequest
-	Class string `json:"class_code"`
+	ClassCode string `json:"class_code"`
 }
 
 // GetPortfolioRequest — данные для создания DataSource.
