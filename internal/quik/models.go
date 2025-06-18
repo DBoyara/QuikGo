@@ -190,7 +190,22 @@ func putRequest(req *request) {
 
 // Event — структура для обработки колбэков от QUIK.
 type Event struct {
-	Cmd  string      `json:"cmd"`
-	T    int64       `json:"t"`
-	Data interface{} `json:"data"`
+	Cmd       string       `json:"cmd"`
+	T         int64        `json:"t"`
+	OrderBook *OrderBook   `json:"order_book,omitempty"`
+	Data      *interface{} `json:"data,omitempty"`
+}
+
+type OrderBook struct {
+	Bid        []Order `json:"bid"`
+	Offer      []Order `json:"offer"`
+	ClassCode  string  `json:"class_code"`
+	SecCode    string  `json:"sec_code"`
+	BidCount   string  `json:"bid_count"`
+	OfferCount string  `json:"offer_count"`
+}
+
+type Order struct {
+	Price    string `json:"price"`
+	Quantity string `json:"quantity"`
 }
