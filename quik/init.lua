@@ -53,7 +53,7 @@ function connect_to_go()
     end
 
     log("Подключение к Go-серверу установлено!", 1)
-    
+
     client:settimeout(0)
     return client
 end
@@ -63,12 +63,12 @@ local event_client = connect_to_go()
 
 function to_json(msg)
     local status, str = pcall(json.encode, msg, { indent = false })
-    
-    if status then 
-        return str 
-    else 
+
+    if status then
+        return str
+    else
         log("Ошибка сериализации JSON: " .. tostring(str), 3)
-        return nil 
+        return nil
     end
 end
 
@@ -383,9 +383,9 @@ function OnQuote(class_code, sec_code)
     local msg = {}
     local status, ql2 = pcall(getQuoteLevel2, class_code, sec_code)
     if status then
-        msg.data = ql2
-        msg.data.class_code = class_code
-        msg.data.sec_code = sec_code
+        msg = ql2
+        msg.class_code = class_code
+        msg.sec_code = sec_code
 
         send_event("OnQuote", msg)
     else
@@ -481,9 +481,9 @@ function subscribe_to_order_book(class_code, sec_code)
         local msg = {}
         local status, ql2 = pcall(getQuoteLevel2, class_code, sec_code)
         if status then
-            msg.data = ql2
-            msg.data.class_code = class_code
-            msg.data.sec_code = sec_code
+            msg = ql2
+            msg.class_code = class_code
+            msg.sec_code = sec_code
 
             -- Отправляем данные клиенту
             send_event("OrderBookUpdate", msg)
@@ -505,7 +505,14 @@ function send_event(event_name, event_data)
         return
     end
 
-    local msg = json.encode({ cmd = event_name, data = event_data }) .. "\n"
+    if event_name == "OnQuote" then
+        local msg = json.encode({ cmd = event_name, order_book = event_data }) .. "\n"
+    elseif event_name == "OrderBookUpdate " then
+        local msg = json.encode({ cmd = event_name, order_book = event_data }) .. "\n"
+    else
+        local msg = json.encode({ cmd = event_name, data = event_data }) .. "\n"
+    end
+
     local success, err = event_client:send(msg)
 
     if success then
@@ -611,9 +618,9 @@ function reconnect_to_go(max_attempts, delay)
 
     for attempt = 1, max_attempts do
         log("Попытка подключения #" .. attempt, 2)
-        
+
         event_client = connect_to_go()
-        
+
         if event_client then
             log("Успешное подключение к Go-серверу!", 1)
             return true
@@ -630,44 +637,44 @@ end
 -- Основная функция запуска сервера и обработки запросов.
 function main()
     response_server = setup_socket()
-    
+
     if not response_server then
         log("Ошибка при настройке сокета", 3)
         return
     end
 
-    while true do 
-        if not is_connected then 
+    while true do
+        if not is_connected then
             response_client = accept_client()
-            
-            if not response_client then 
+
+            if not response_client then
                 sleep(500) -- Ждём перед повторной проверкой подключения клиента.
-            else 
-                is_connected = true  
-                log("Клиент успешно подключен",1)  
-                
+            else
+                is_connected = true
+                log("Клиент успешно подключен",1)
+
                 -- Проверяем соединение с Go-сервером и переподключаемся при необходимости.
-                if not event_client or not reconnect_to_go() then  
-                    log("Не удалось установить соединение с Go. Завершение работы.",3)  
-                    break  
-                end   
+                if not event_client or not reconnect_to_go() then
+                    log("Не удалось установить соединение с Go. Завершение работы.",3)
+                    break
+                end
             end
-            
-        else   
+
+        else
             local request, err = receive_message(response_client)
 
-            if request then   
-                local response = process_request(request)    
+            if request then
+                local response = process_request(request)
                 send_response(response_client, response)
 
-            elseif err and err ~= "timeout" then    
+            elseif err and err ~= "timeout" then
                -- Ошибка связи или отключение клиента.
-               log ("Клиент отключился: "..err ,3 )     
-               response_client=nil     
-               is_connected=false      
-           end       
-       end  
+               log ("Клиент отключился: "..err ,3 )
+               response_client=nil
+               is_connected=false
+           end
+       end
 
-       sleep(100)   -- Пауза перед следующим циклом обработки событий.      
-   end   
-end 
+       sleep(100)   -- Пауза перед следующим циклом обработки событий.
+   end
+end
