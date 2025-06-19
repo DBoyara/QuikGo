@@ -505,12 +505,11 @@ function send_event(event_name, event_data)
         return
     end
 
+    local msg = json.encode({ cmd = event_name, data = event_data }) .. "\n"
     if event_name == "OnQuote" then
-        local msg = json.encode({ cmd = event_name, order_book = event_data }) .. "\n"
-    elseif event_name == "OrderBookUpdate " then
-        local msg = json.encode({ cmd = event_name, order_book = event_data }) .. "\n"
-    else
-        local msg = json.encode({ cmd = event_name, data = event_data }) .. "\n"
+        msg = json.encode({ cmd = event_name, order_book = event_data }) .. "\n"
+    elseif event_name == "OrderBookUpdate" then
+        msg = json.encode({ cmd = event_name, order_book = event_data }) .. "\n"
     end
 
     local success, err = event_client:send(msg)
