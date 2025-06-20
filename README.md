@@ -9,7 +9,7 @@
 [![Known Vulnerabilities](https://snyk.io/test/github/DBoyara/QuikGo/badge.svg)](https://snyk.io/test/github/DBoyara/QuikGo)
 
 ## Install
-go get -u github.com/DBoyara/QuikGo@v0.4.1
+go get -u github.com/DBoyara/QuikGo@v0.4.6
 
 ## Examples
 
